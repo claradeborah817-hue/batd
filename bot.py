@@ -1,4 +1,6 @@
 import logging
+import os
+import sys
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -90,7 +92,7 @@ async def show_about(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return START_MENU
 
 
-async def ask_question(query, question_idx, current_score):
+async def ask_question(query, question_idx):
     """Helper to ask a quiz question."""
     q_data = QUESTIONS[question_idx]
     keyboard = []
@@ -106,7 +108,7 @@ async def handle_start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     query = update.callback_query
     await query.answer()
     context.user_data["score"] = 0
-    await ask_question(query, 0, 0)
+    await ask_question(query, 0)
     return QUESTION_1
 
 
@@ -117,7 +119,7 @@ async def handle_q1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     score_val = int(query.data.split("_")[2])
     context.user_data["score"] += score_val
 
-    await ask_question(query, 1, context.user_data["score"])
+    await ask_question(query, 1)
     return QUESTION_2
 
 
@@ -128,7 +130,7 @@ async def handle_q2(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     score_val = int(query.data.split("_")[2])
     context.user_data["score"] += score_val
 
-    await ask_question(query, 2, context.user_data["score"])
+    await ask_question(query, 2)
     return QUESTION_3
 
 
@@ -139,7 +141,7 @@ async def handle_q3_and_deliver_results(update: Update, context: ContextTypes.DE
     score_val = int(query.data.split("_")[2])
     total_score = context.user_data.get("score", 0) + score_val
 
-    # Dynamic dynamic outcome calculation based on answers
+    # Dynamic outcome calculation based on answers
     if total_score <= 40:
         tier = "🌱 **Phase 1: Foundation Building**"
         recommendation = (
@@ -179,28 +181,16 @@ async def handle_q3_and_deliver_results(update: Update, context: ContextTypes.DE
 
 def main() -> None:
     """Run the bot."""
-    TOKEN = "YOUR_TELEGRAM_BOT_TOKEN_HERE"
+    # Retrieve Bot Token from Railway environment variables
+    TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+
+    if not TOKEN:
+        logging.error("TELEGRAM_BOT_TOKEN environment variable is not set!")
+        sys.exit("Error: Please set TELEGRAM_BOT_TOKEN in Railway variables.")
 
     application = Application.builder().token(TOKEN).build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
-            START_MENU: [
-                CallbackQueryHandler(handle_start_quiz, pattern="^start_quiz$"),
-                CallbackQueryHandler(show_about, pattern="^about$"),
-                CallbackQueryHandler(start, pattern="^back_main$"),
-            ],
-            QUESTION_1: [CallbackQueryHandler(handle_q1, pattern="^q_0_")],
-            QUESTION_2: [CallbackQueryHandler(handle_q2, pattern="^q_1_")],
-            QUESTION_3: [CallbackQueryHandler(handle_q3_and_deliver_results, pattern="^q_2_")],
-        },
-        fallbacks=[CommandHandler("start", start)],
-    )
-
-    application.add_handler(conv_handler)
-    application.run_polling()
-
-
-if __name__ == "__main__":
-    main()
+            START_
